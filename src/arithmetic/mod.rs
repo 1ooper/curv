@@ -18,6 +18,7 @@ mod errors;
 mod macros;
 mod samplable;
 mod serde_support;
+mod cbor_support;
 pub mod traits;
 
 #[cfg(not(any(feature = "rust-gmp-kzen", feature = "num-bigint")))]
@@ -101,6 +102,16 @@ mod test {
         let v: &[u8] = b"\x0f\x42\x40";
         let n = BigInt::from_bytes(v);
         assert_eq!(n, BigInt::from(1_000_000_u32))
+    }
+
+    #[test]
+    fn encode_decode_cbor() {
+        let n = BigInt::from(1_000_000_u32);
+        let mut buffer = [0u8; 256];
+        minicbor::encode(&n, &mut buffer.as_mut()).unwrap();
+        let mut decoder = minicbor::Decoder::new(&buffer);
+        let a: BigInt = decoder.decode().unwrap();
+        assert_eq!(n, a);
     }
 
     #[test]
