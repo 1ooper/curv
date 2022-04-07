@@ -9,6 +9,10 @@
 use digest::Digest;
 use serde::{Deserialize, Serialize};
 
+use minicbor::encode::Write;
+use minicbor::{decode, encode};
+use minicbor::{Decode, Decoder, Encode, Encoder};
+
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::marker::HashChoice;
@@ -99,6 +103,41 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
         } else {
             Err(ProofError)
         }
+    }
+}
+
+impl<E: Curve, H: Digest + Clone> Encode for HomoELGamalProof<E, H> {
+    fn encode<W:Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+        e.array(4)?
+            .bytes(&self.T.to_bytes(true))?
+            .bytes(&self.A3.to_bytes(true))?
+            .bytes(&self.z1.to_bytes())?
+            .bytes(&self.z2.to_bytes())?
+            .ok()
+    }
+}
+
+
+impl<'b, E: Curve, H: Digest + Clone> Decode<'b> for HomoELGamalProof<E, H> {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+        let _obj_len = d.array()?;
+        let T_bytes = d.bytes()?;
+        let A3_bytes = d.bytes()?;
+        let z1_bytes = d.bytes()?;
+        let z2_bytes = d.bytes()?;
+        let T = Point::<E>::from_bytes(&T_bytes).unwrap();
+        let A3 = Point::<E>::from_bytes(&A3_bytes).unwrap();
+        let z1 = Scalar::<E>::from_bytes(&z1_bytes).unwrap();
+        let z2 = Scalar::<E>::from_bytes(&z2_bytes).unwrap();
+        Ok(
+            HomoELGamalProof {
+                T,
+                A3,
+                z1,
+                z2,
+                hash_choice: HashChoice::new(),
+            },
+        )
     }
 }
 

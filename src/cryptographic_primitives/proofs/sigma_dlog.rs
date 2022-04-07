@@ -7,6 +7,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use minicbor::encode::Write;
+use minicbor::{decode, encode};
+use minicbor::{Decode, Decoder, Encode, Encoder};
+
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::marker::HashChoice;
@@ -88,5 +92,33 @@ mod tests {
         let witness = Scalar::random();
         let dlog_proof = DLogProof::<E, H>::prove(&witness);
         assert!(DLogProof::verify(&dlog_proof).is_ok());
+    }
+}
+
+impl <E: Curve, H: Digest + Clone> Encode for DLogProof<E, H> {
+   fn encode<W:Write>(&self, e: &mut Encoder<W>) -> Result<(), encode::Error<W::Error>> {
+        e.array(3)?
+            .bytes(&self.pk.to_bytes(true))?
+            .bytes(&self.pk_t_rand_commitment.to_bytes(true))?
+            .bytes(&self.challenge_response.to_bytes())?
+            .ok()
+    }
+}
+
+impl <'b, E: Curve, H: Digest + Clone> Decode<'b> for DLogProof<E, H> {
+    fn decode(d: &mut Decoder<'b>) -> Result<Self, decode::Error> {
+        let _obj_len = d.array()?;
+        let pk_bytes = d.bytes()?;
+        let pk_t_rand_commitment_bytes = d.bytes()?;
+        let challenge_response_bytes = d.bytes()?;
+        let pk = Point::<E>::from_bytes(&pk_bytes).unwrap();
+        let pk_t_rand_commitment = Point::<E>::from_bytes(&pk_t_rand_commitment_bytes).unwrap();
+        let challenge_response = Scalar::from_bytes(&challenge_response_bytes).unwrap();
+        Ok(DLogProof {
+            pk,
+            pk_t_rand_commitment,
+            challenge_response,
+            hash_choice: HashChoice::new(),
+        })
     }
 }

@@ -6,6 +6,7 @@ mod generator;
 mod point;
 mod scalar;
 mod serde_support;
+mod cbor_support;
 
 pub use self::{
     encoded_point::EncodedPoint, encoded_scalar::EncodedScalar, generator::Generator, point::Point,
